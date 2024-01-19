@@ -1,0 +1,23 @@
+---
+
+- name: set ciphers
+  ansible.builtin.lineinfile:
+    dest: '{{ sshd_config_filepath }}'
+    state: present
+    regex: '#?^Ciphers '
+    line: 'Ciphers {{ sshd_ciphers }}'
+
+- name: set key exchange algorithm
+  ansible.builtin.lineinfile:
+    dest: '{{ sshd_config_filepath }}'
+    state: present
+    regex: '#?^KexAlgorithms '
+    line: 'KexAlgorithms {{ sshd_keyexchange_algorithms }}'
+
+- name: set key exchange algorithm
+  ansible.builtin.lineinfile:
+    dest: '{{ sshd_config_filepath }}'
+    state: present
+    regex: '#?^MACs '
+    line: 'MACs {{ sshd_macs }}'
+
