@@ -2,8 +2,6 @@
 
 This ansible role changes an existing sshd config to use only secure crypto.
 
-[[_TOC_]]
-
 ## Example playbook
 
 ```yaml
@@ -39,7 +37,7 @@ ssh -Q mac
 
 You can check the ssh settings with some tools.
 
-### `nmap`
+### nmap
 
 ```shell
 nmap -p22 -n -sV --script ssh2-enum-algos <IP-ADDRESS>
