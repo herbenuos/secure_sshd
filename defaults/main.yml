@@ -1,4 +1,4 @@
-sshd_config_filepath: /etc/ssh/sshd_config.test #/etc/ssh/sshd_config
+sshd_config_filepath: /etc/ssh/sshd_config
 
 # General SSH settings
 sshd_ssh_protocol_version: 2
