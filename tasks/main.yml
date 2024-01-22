@@ -1,0 +1,5 @@
+---
+
+- import_tasks: set_general_settings.yml
+- import_tasks: set_crypto_algorithms.yml
+- import_tasks: disable_global_crypto_config.yml
