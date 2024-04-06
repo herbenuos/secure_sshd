@@ -4,5 +4,7 @@
   ansible.builtin.import_tasks: set_general_settings.yml
 - name: Configure crypto algorithms
   ansible.builtin.import_tasks: set_crypto_algorithms.yml
+- name: Configure login options
+  ansible.builtin.import_tasks: set_login.yml
 - name: Disable global crypto configuration
   ansible.builtin.import_tasks: disable_global_crypto_config.yml
