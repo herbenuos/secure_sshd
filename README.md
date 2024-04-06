@@ -4,12 +4,26 @@ This ansible role changes an existing sshd config to use only secure crypto.
 
 ## Example playbook
 
+Add this role to the `requirements.yml` and install it:
+
+```yaml
+- src: https://github.com/UOS-RZ/secure_sshd.git
+  scm: git
+  version: main
+```
+
+Then include the role in your playbook:
+
 ```yaml
 - hosts: all
   become: true
   roles:
-    - role: UOS-RZ.secure_sshd
+    - role: secure_sshd
 ```
+
+## Configuration options
+
+Take a look at the [defaults](defaults/main.yml) to see what variables you can set.
 
 ## Check crypto algorithms
 
