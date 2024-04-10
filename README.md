@@ -50,7 +50,7 @@ nmap -p22 -n -sV --script ssh2-enum-algos <IP-ADDRESS>
 
 ## License
 
-tbd
+[BSD-3-Clause](LICENSE)
 
 ## Author information
 
