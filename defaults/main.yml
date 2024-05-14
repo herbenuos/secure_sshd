@@ -20,3 +20,14 @@ sshd_ciphers:
 sshd_macs:
   - hmac-sha2-512
   - hmac-sha2-256
+
+# If login as user `root` is permitted.
+# For more details, take a look at PermitRootLogin in the sshd_config man page.
+# Valid options are: yes, prohibit-password, forced-commands-only, or no
+sshd_root_login: prohibit-password
+
+# If password authentication is permitted.
+# More details at PasswordAuthentication in the sshd_config man page.
+# Valid options are `yes` or `no`
+# Warning: Ensure these values are quoted in yaml.
+sshd_password_login: 'no'
