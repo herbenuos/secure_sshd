@@ -1,9 +1,11 @@
 ---
 
-- name: disable globaly crypto config for sshd on RedHat >= 8
+- name: Disable globaly crypto config for sshd on RedHat >= 8
   ansible.builtin.lineinfile:
     dest: /etc/sysconfig/sshd
     regexp: '^CRYPTO_POLICY='
     line: 'CRYPTO_POLICY='
-  notify: restart sshd
-  when: ansible_os_family == 'RedHat' and ansible_distribution_major_version | int >= 8
+  notify: Restart sshd
+  when: >
+    ansible_os_family == 'RedHat'
+    and ansible_distribution_major_version | int >= 8

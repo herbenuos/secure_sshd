@@ -1,6 +1,6 @@
 ---
 
-- name: set ssh version explicit
+- name: Set ssh version explicit
   ansible.builtin.lineinfile:
     path: '{{ sshd_config_filepath }}'
     state: present
@@ -8,7 +8,7 @@
     regex: '^#?Protocol'
     line: 'Protocol {{ sshd_ssh_protocol_version }}'
 
-- name: set log level to {{ sshd_log_level }}
+- name: Set log level to {{ sshd_log_level }}
   ansible.builtin.lineinfile:
     path: '{{ sshd_config_filepath }}'
     state: present

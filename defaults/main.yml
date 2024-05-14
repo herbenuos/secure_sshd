@@ -1,3 +1,4 @@
+---
 sshd_config_filepath: /etc/ssh/sshd_config
 
 # General SSH settings

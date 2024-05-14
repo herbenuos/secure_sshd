@@ -1,5 +1,8 @@
 ---
 
-- import_tasks: set_general_settings.yml
-- import_tasks: set_crypto_algorithms.yml
-- import_tasks: disable_global_crypto_config.yml
+- name: Configure general SSHd settings
+  ansible.builtin.import_tasks: set_general_settings.yml
+- name: Configure crypto algorithms
+  ansible.builtin.import_tasks: set_crypto_algorithms.yml
+- name: Disable global crypto configuration
+  ansible.builtin.import_tasks: disable_global_crypto_config.yml
