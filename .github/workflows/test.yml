@@ -1,6 +1,6 @@
 ---
 
-name: deployment test
+name: Deployment
 
 on:  # yamllint disable-line rule:truthy
   - push
@@ -41,4 +41,4 @@ jobs:
 
       - name: test ssh
         run: |
-          ssh test echo success
+          ssh test sshd -T
