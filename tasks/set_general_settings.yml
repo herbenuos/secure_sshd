@@ -7,6 +7,7 @@
     insertbefore: BOF
     regex: '^#?Protocol'
     line: 'Protocol {{ sshd_ssh_protocol_version }}'
+  notify: Restart sshd
 
 - name: Set log level to {{ sshd_log_level }}
   ansible.builtin.lineinfile:
@@ -14,3 +15,4 @@
     state: present
     regex: '^#?LogLevel'
     line: 'LogLevel {{ sshd_log_level }}'
+  notify: Restart sshd

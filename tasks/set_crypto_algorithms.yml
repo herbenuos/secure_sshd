@@ -13,3 +13,4 @@
       value: '{{ sshd_keyexchange_algorithms | join(",") }}'
     - key: MACs
       value: '{{ sshd_macs | join(",") }}'
+  notify: Restart sshd

@@ -11,3 +11,4 @@
       value: '{{ sshd_root_login }}'
     - key: PasswordAuthentication
       value: '{{ sshd_password_login }}'
+  notify: Restart sshd
