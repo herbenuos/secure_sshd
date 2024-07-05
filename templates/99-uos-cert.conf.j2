@@ -1,0 +1,13 @@
+
+# General Settings
+Protocol {{ sshd_ssh_protocol_version }}
+LogLevel {{ sshd_log_level }}
+
+# Login
+PermitRootLogin {{ sshd_root_login }}
+PasswordAuthentication {{ sshd_password_login }}
+
+# Crypto Algorithms
+Ciphers {{ sshd_ciphers | join(",") }}
+KexAlgorithms {{ sshd_keyexchange_algorithms | join(",") }}
+MACs {{ sshd_macs | join(",") }}
