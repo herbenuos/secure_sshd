@@ -3,7 +3,7 @@ sshd_config_filepath: /etc/ssh/sshd_config
 
 # General SSH settings
 sshd_ssh_protocol_version: 2
-sshd_log_level: VERBOSE # default: INFO
+sshd_log_level: VERBOSE
 
 # Ciphers and keying
 sshd_keyexchange_algorithms:
