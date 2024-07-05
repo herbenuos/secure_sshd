@@ -1,0 +1,44 @@
+---
+
+name: deployment test
+
+on:  # yamllint disable-line rule:truthy
+  - push
+  - pull_request
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        distribution:
+          - dist: almalinux
+            version: '9'
+          - dist: centos
+            version: 9-Stream
+          - dist: rockylinux
+            version: '9'
+          - dist: debian
+            version: bookworm
+          - dist: ubuntu
+            version: jammy
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install dependencies
+        run: pip3 install ansible
+
+      - name: create lxc container
+        uses: lkiesow/setup-lxc-container@v1
+        with:
+          dist: ${{ matrix.distribution.dist }}
+          release: ${{ matrix.distribution.version }}
+
+      - name: run tests
+        working-directory: .test
+        run: ansible-playbook -i hosts.yml test.yml
+
+      - name: test ssh
+        run: |
+          ssh test echo success

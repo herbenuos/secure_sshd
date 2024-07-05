@@ -1,0 +1,6 @@
+---
+- name: Test Deployment
+  hosts: all
+  become: true
+  roles:
+    - role: secure_sshd
