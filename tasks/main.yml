@@ -15,8 +15,8 @@
 
 - name: Create override configuration file
   ansible.builtin.template:
-    src: 99-uos-cert.conf.j2
-    dest: '{{ sshd_config_directory }}/sshd_config.d/99-uos-cert.conf'
+    src: 01-uos-cert.conf.j2
+    dest: '{{ sshd_config_directory }}/sshd_config.d/01-uos-cert.conf'
     owner: root
     group: root
     mode: '0600'
