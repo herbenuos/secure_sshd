@@ -1,10 +1,31 @@
 ---
+- name: Ensure sshd_config.d directory exists
+  ansible.builtin.file:
+    dest: '{{ sshd_config_directory }}/sshd_config.d'
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
 
-- name: Configure general SSHd settings
-  ansible.builtin.import_tasks: set_general_settings.yml
-- name: Configure crypto algorithms
-  ansible.builtin.import_tasks: set_crypto_algorithms.yml
-- name: Configure login options
-  ansible.builtin.import_tasks: set_login.yml
-- name: Disable global crypto configuration
-  ansible.builtin.import_tasks: disable_global_crypto_config.yml
+- name: Ensure include path is in sshd_config
+  ansible.builtin.lineinfile:
+    dest: '{{ sshd_config_filepath }}'
+    line: 'Include {{ sshd_config_directory }}/sshd_config.d/*.conf'
+  notify: Restart sshd
+
+- name: Create override configuration file
+  ansible.builtin.template:
+    src: 01-uos-cert.conf.j2
+    dest: '{{ sshd_config_directory }}/sshd_config.d/01-uos-cert.conf'
+    owner: root
+    group: root
+    mode: '0600'
+  notify: Restart sshd
+
+- name: Globally disable crypto policy for sshd on RedHat
+  ansible.builtin.lineinfile:
+    dest: /etc/sysconfig/sshd
+    regexp: '^CRYPTO_POLICY='
+    line: 'CRYPTO_POLICY='
+  notify: Restart sshd
+  when: ansible_os_family == 'RedHat'
