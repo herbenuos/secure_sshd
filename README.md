@@ -21,6 +21,10 @@ Then include the role in your playbook:
     - role: secure_sshd
 ```
 
+For a full example playbook with step-by-step instructions, take a look at
+
+- [Example Ansible playbook including secure\_sshd](https://github.com/UOS-RZ/secure_sshd/tree/example.playbook)
+
 ## Configuration options
 
 Take a look at the [defaults](defaults/main.yml) to see what variables you can set.
