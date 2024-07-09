@@ -9,7 +9,7 @@ Add this role to the `requirements.yml` and install it:
 ```yaml
 - src: https://github.com/UOS-RZ/secure_sshd.git
   scm: git
-  version: 1.0.0
+  version: 1.1.0
 ```
 
 Then include the role in your playbook:
