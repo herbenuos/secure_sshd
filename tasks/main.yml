@@ -1,5 +1,6 @@
 ---
 - name: Ensure sshd_config.d directory exists
+  become: true
   ansible.builtin.file:
     dest: '{{ sshd_config_directory }}/sshd_config.d'
     state: directory
@@ -8,24 +9,196 @@
     mode: '0700'
 
 - name: Ensure include path is in sshd_config
+  become: true
   ansible.builtin.lineinfile:
     dest: '{{ sshd_config_filepath }}'
     line: 'Include {{ sshd_config_directory }}/sshd_config.d/*.conf'
   notify: Restart sshd
 
-- name: Create override configuration file
+- name: Set openssh server policy
+  become: true
   ansible.builtin.template:
-    src: 01-uos-cert.conf.j2
-    dest: '{{ sshd_config_directory }}/sshd_config.d/01-uos-cert.conf'
+    src: opensshserver.config.j2
+    dest: /etc/crypto-policies/back-ends/opensshserver.config
     owner: root
-    group: root
     mode: '0600'
   notify: Restart sshd
+  when: ansible_facts['os_family'] == "RedHat"
 
-- name: Globally disable crypto policy for sshd on RedHat
-  ansible.builtin.lineinfile:
-    dest: /etc/sysconfig/sshd
-    regexp: '^CRYPTO_POLICY='
-    line: 'CRYPTO_POLICY='
+- name: Set Allowed Kex/Ciphers/MACs
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/ssh/sshd_config
+    marker: "# {mark} UOS CERT SSH Hardening"
+    state: present
+    insertafter: EOF
+    block: |
+      Ciphers {{ secure_sshd_ciphers | join(",") }}
+      MACs {{ secure_sshd_macs | join(",") }}
+      GSSAPIKexAlgorithms {{ secure_sshd_gss_kex_algorithms | join(",") }}
+      KexAlgorithms {{ secure_sshd_kex_algorithms | join(",") }}
+      HostKeyAlgorithms {{ secure_sshd_hostkey_algorithms | join(",") }}
+      CASignatureAlgorithms {{ secure_sshd_ca_signature_algorithms | join(",") }}
+  when: ansible_facts['os_family'] != "RedHat"
   notify: Restart sshd
-  when: ansible_os_family == 'RedHat'
+
+- name: Change config
+  become: true
+  notify: Restart sshd
+  block:
+    - name: Enable ED25519 host key
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#HostKey /etc/ssh/ssh_host_ed25519_key'
+        state: present
+        line: "HostKey /etc/ssh/ssh_host_ed25519_key"
+        backrefs: true
+
+    - name: Disable RSA host key
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^HostKey /etc/ssh/ssh_host_rsa_key'
+        state: present
+        line: "#HostKey /etc/ssh/ssh_host_rsa_key"
+        backrefs: true
+
+    - name: Disable root login
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: "PermitRootLogin {{ secure_sshd_permit_root_login }}"
+        state: present
+        backrefs: true
+
+    - name: Allow authentication with public keys
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PubkeyAuthentication'
+        line: "PubkeyAuthentication {{ secure_sshd_publickey_authentication }}"
+        state: present
+        backrefs: true
+
+    - name: Disable password authentication
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: "PasswordAuthentication {{ secure_sshd_password_authentication }}"
+        state: present
+        backrefs: true
+
+    - name: Enforce SSHv2
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?Protocol'
+        line: "Protocol {{ secure_sshd_protocol_version }}"
+        state: present
+        backrefs: true
+
+    - name: Disable DSA host key
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^HostKey /etc/ssh/ssh_host_dsa_key'
+        state: absent
+        backrefs: true
+
+    - name: Disable ECDSA host key
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^HostKey /etc/ssh/ssh_host_ecdsa_key'
+        state: absent
+        backrefs: true
+
+    - name: Set login grace time
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regex: '^LoginGraceTime '
+        line: 'LoginGraceTime {{ secure_sshd_login_grace_time }}'
+
+    - name: Set maximum authentication tries
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regex: '^MaxAuthTries '
+        line: 'MaxAuthTries {{ secure_sshd_max_auth_tries }}'
+
+    - name: Disable GSSAPI and Kerberos
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regex: '{{ item.regex }} '
+        line: '{{ item.line }}'
+      loop:
+        - regex: '^GSSAPIAuthentication '
+          line: 'GSSAPIAuthentication no'
+        - regex: '^KerberosAuthentication '
+          line: 'KerberosAuthentication no'
+
+    - name: Enable PAM (pluggable Authentication Module)
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regex: '^UsePAM '
+        line: 'UsePAM {{ secure_sshd_use_pam }}'
+
+    - name: Set maximum sessions
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regex: '^MaxSessions '
+        line: 'MaxSessions {{ secure_sshd_max_sessions }}'
+
+    - name: Set maximum startups / random early drop
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regex: '^MaxStartups '
+        line: 'MaxStartups {{ secure_sshd_max_startups }}'
+
+    - name: Set strict mode
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regex: '^StrictModes '
+        line: 'StrictModes {{ secure_sshd_strict_mode }}'
+
+    - name: Disable x11 forwarding
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regex: '^X11Forwarding '
+        line: 'X11Forwarding {{ secure_sshd_allow_x11_forwarding }}'
+
+    - name: Eneable compression
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regex: '^Compression '
+        line: 'Compression {{ secure_sshd_compression }}'
+
+    - name: Enable tcp keep alive
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regex: '^TCPKeepAlive '
+        line: 'TCPKeepAlive {{ secure_sshd_tcp_keep_alive }}'
+
+    - name: Show message of the day
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regex: '^PrintMotd '
+        line: 'PrintMotd {{ secure_sshd_print_motd }}'
+
+    - name: Show last login
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regex: '^PrintLastLog '
+        line: 'PrintLastLog {{ secure_sshd_print_last_login }}'
+
+    - name: Disable agent forwarding
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regex: '^AllowAgentForwarding '
+        line: 'AllowAgentForwarding {{ secure_sshd_allow_agent_forwarding }}'
+
+    - name: Disable TCP forwarding
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regex: '^AllowAgentForwarding '
+        line: 'AllowAgentForwarding {{ secure_sshd_allow_agent_forwarding }}'
+
+    - name: Disable empty passwords
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regex: '^PermitEmptyPasswords '
+        line: 'PermitEmptyPasswords {{ secure_sshd_permit_empty_passwords }}'
