@@ -1,5 +1,6 @@
 ---
 - name: Ensure sshd_config.d directory exists
+  become: true
   ansible.builtin.file:
     dest: '{{ sshd_config_directory }}/sshd_config.d'
     state: directory
@@ -7,25 +8,168 @@
     group: root
     mode: '0700'
 
-- name: Ensure include path is in sshd_config
+
+- name: Set sshd config include line
+  ansible.builtin.set_fact:
+    include_line: 'Include {{ sshd_config_directory }}/sshd_config.d/*.conf'
+
+- name: Check last line of sshd config for Include
+  become: true
+  ansible.builtin.command:
+    cmd: tail -n 1 '{{ sshd_config_filepath }}'
+  register: last_line
+  changed_when: false
+
+- name: Move include path in sshd_config
+  become: true
+  ansible.builtin.lineinfile:
+    state: absent
+    dest: '{{ sshd_config_filepath }}'
+    line: '{{ include_line }}'
+  notify: Restart sshd
+  when: last_line.stdout != include_line
+
+- name: Ensure include path is at the end in sshd_config
+  become: true
   ansible.builtin.lineinfile:
     dest: '{{ sshd_config_filepath }}'
-    line: 'Include {{ sshd_config_directory }}/sshd_config.d/*.conf'
+    line: '{{ include_line }}'
+    insertafter: EOF
   notify: Restart sshd
+  when: last_line.stdout != include_line
 
-- name: Create override configuration file
+- name: Set openssh server policy
+  become: true
   ansible.builtin.template:
-    src: 01-uos-cert.conf.j2
-    dest: '{{ sshd_config_directory }}/sshd_config.d/01-uos-cert.conf'
+    src: opensshserver.config.j2
+    dest: /etc/crypto-policies/back-ends/opensshserver.config
     owner: root
-    group: root
     mode: '0600'
   notify: Restart sshd
+  when: ansible_facts['os_family'] == "RedHat"
 
-- name: Globally disable crypto policy for sshd on RedHat
-  ansible.builtin.lineinfile:
-    dest: /etc/sysconfig/sshd
-    regexp: '^CRYPTO_POLICY='
-    line: 'CRYPTO_POLICY='
+- name: Set Allowed Kex/Ciphers/MACs
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/ssh/sshd_config
+    marker: "# {mark} UOS CERT SSH Hardening"
+    state: present
+    insertbefore: "^Include .*"
+    block: |
+      Ciphers {{ secure_sshd_ciphers | join(",") }}
+      MACs {{ secure_sshd_macs | join(",") }}
+      GSSAPIKexAlgorithms {{ secure_sshd_gss_kex_algorithms | join(",") }}
+      KexAlgorithms {{ secure_sshd_kex_algorithms | join(",") }}
+      HostKeyAlgorithms {{ secure_sshd_hostkey_algorithms | join(",") }}
+      CASignatureAlgorithms {{ secure_sshd_ca_signature_algorithms | join(",") }}
+      RequiredRSASize {{ secure_sshd_required_rsa_keysize_bits }}
+  when: ansible_facts['os_family'] != "RedHat"
   notify: Restart sshd
-  when: ansible_os_family == 'RedHat'
+
+- name: Change config
+  become: true
+  notify: Restart sshd
+  block:
+    - name: Loop over sshd_config
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regex }}"
+        state: present
+        line: "{{ item.line }}"
+        backrefs: true
+      loop:
+        - name: Enable Verbose Logging
+          regex: '^#?LogLevel '
+          line: "Loglevel {{ secure_sshd_log_level }}"
+        - name: Enable ED25519 host key
+          regex: '^#?HostKey /etc/ssh/ssh_host_ed25519_key'
+          line: "HostKey /etc/ssh/ssh_host_ed25519_key"
+        - name: Disable RSA host key
+          regex: '^#?HostKey /etc/ssh/ssh_host_rsa_key'
+          line: "#HostKey /etc/ssh/ssh_host_rsa_key"
+        - name: Disable root login
+          regex: '^#?PermitRootLogin'
+          line: "PermitRootLogin {{ secure_sshd_permit_root_login }}"
+        - name: Allow authentication with public keys
+          regex: '^#?PubkeyAuthentication'
+          line: "PubkeyAuthentication {{ secure_sshd_publickey_authentication }}"
+        - name: Disable password authentication
+          regex: '^#?PasswordAuthentication'
+          line: "PasswordAuthentication {{ secure_sshd_password_authentication }}"
+        - name: Enforce SSHv2
+          regex: '^#?Protocol'
+          line: "Protocol {{ secure_sshd_protocol_version }}"
+        - name: Set login grace time
+          regex: '^#?LoginGraceTime '
+          line: 'LoginGraceTime {{ secure_sshd_login_grace_time }}'
+        - name: Set maximum authentication tries
+          regex: '^MaxAuthTries '
+          line: 'MaxAuthTries {{ secure_sshd_max_auth_tries }}'
+        - name: Enable PAM (pluggable Authentication Module)
+          regex: '^#?UsePAM '
+          line: 'UsePAM {{ secure_sshd_use_pam }}'
+        - name: Set maximum sessions
+          regex: '^#?MaxSessions '
+          line: 'MaxSessions {{ secure_sshd_max_sessions }}'
+        - name: Set maximum startups / random early drop
+          regex: '^#?MaxStartups '
+          line: 'MaxStartups {{ secure_sshd_max_startups }}'
+        - name: Set strict mode
+          regex: '^#?StrictModes '
+          line: 'StrictModes {{ secure_sshd_strict_mode }}'
+        - name: Disable x11 forwarding
+          regex: '^#?X11Forwarding '
+          line: 'X11Forwarding {{ secure_sshd_allow_x11_forwarding }}'
+        - name: Eneable compression
+          regex: '^#?Compression '
+          line: 'Compression {{ secure_sshd_compression }}'
+        - name: Enable tcp keep alive
+          regex: '^#?TCPKeepAlive '
+          line: 'TCPKeepAlive {{ secure_sshd_tcp_keep_alive }}'
+        - name: Show message of the day
+          regex: '^#?PrintMotd '
+          line: 'PrintMotd {{ secure_sshd_print_motd }}'
+        - name: Show last login
+          regex: '^#?PrintLastLog '
+          line: 'PrintLastLog {{ secure_sshd_print_last_login }}'
+        - name: Disable agent forwarding
+          regex: '^#AllowAgentForwarding '
+          line: 'AllowAgentForwarding {{ secure_sshd_allow_agent_forwarding }}'
+        - name: Disable TCP forwarding
+          regex: '^#?AllowTcpForwarding '
+          line: 'AllowTcpForwarding {{ secure_sshd_allow_agent_forwarding }}'
+        - name: Disable empty passwords
+          regex: '^#?PermitEmptyPasswords '
+          line: 'PermitEmptyPasswords {{ secure_sshd_permit_empty_passwords }}'
+        - name: Disable GSSAPI
+          regex: '^#?GSSAPIAuthentication '
+          line: 'GSSAPIAuthentication no'
+        - name: Disable Kerberos
+          regex: '^#?KerberosAuthentication '
+          line: 'KerberosAuthentication no'
+        - name: Rekey Limit
+          regex: '^#?RekeyLimit '
+          line: 'RekeyLimit {{ secure_sshd_rekeylimit }}'
+        - name: Disable Tunneling
+          regex: '^#?PermitTunnel '
+          line: PermitTunnel no
+      loop_control:
+        label: "{{ item.name }}"
+
+- name: Change config
+  become: true
+  notify: Restart sshd
+  block:
+    - name: Disable DSA host key
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?HostKey /etc/ssh/ssh_host_dsa_key'
+        state: absent
+        backrefs: true
+
+    - name: Disable ECDSA host key
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?HostKey /etc/ssh/ssh_host_ecdsa_key'
+        state: absent
+        backrefs: true

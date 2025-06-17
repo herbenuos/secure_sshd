@@ -1,0 +1,7 @@
+Ciphers {{ secure_sshd_ciphers | join(",") }}
+MACs {{ secure_sshd_macs | join(",") }}
+GSSAPIKexAlgorithms {{ secure_sshd_gss_kex_algorithms | join(",") }}
+KexAlgorithms {{ secure_sshd_kex_algorithms | join(",") }}
+HostKeyAlgorithms {{ secure_sshd_hostkey_algorithms | join(",") }}
+CASignatureAlgorithms {{ secure_sshd_ca_signature_algorithms | join(",") }}
+RequiredRSASize 3072
