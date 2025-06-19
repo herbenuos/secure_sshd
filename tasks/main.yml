@@ -58,7 +58,11 @@
       KexAlgorithms {{ secure_sshd_kex_algorithms | join(",") }}
       HostKeyAlgorithms {{ secure_sshd_hostkey_algorithms | join(",") }}
       CASignatureAlgorithms {{ secure_sshd_ca_signature_algorithms | join(",") }}
+      {% if ansible_distribution == "Ubuntu" and ansible_distribution_version == "22.04" %}
+      # RequiredRSASize {{ secure_sshd_required_rsa_keysize_bits }} # Not working
+      {% else %}
       RequiredRSASize {{ secure_sshd_required_rsa_keysize_bits }}
+      {% endif %}
   notify: Restart sshd
 
 - name: Change config
