@@ -66,8 +66,8 @@ secure_sshd_hostkey_algorithms: "{{ secure_sshd_pubkey_accepted_algorithms }}"
 
 # Authentication
 secure_sshd_login_grace_time: 1m # default: 2m
-secure_sshd_max_auth_tries: 4 # default: 6
-secure_sshd_max_sessions: 10 # default: 10
+secure_sshd_max_auth_tries: 6 # default: 6
+secure_sshd_max_sessions: 2 # default: 10
 secure_sshd_permit_root_login: 'no' # default: yes
 secure_sshd_strict_mode: 'yes' # default: yes
 secure_sshd_publickey_authentication: 'yes' # default: yes
@@ -86,7 +86,10 @@ secure_sshd_allow_x11_forwarding: 'no' # default: no
 # misc
 secure_sshd_print_motd: 'yes' # default: yes
 secure_sshd_print_last_login: 'yes' # default: yes
-secure_sshd_tcp_keep_alive: 'yes' # default: yes
-secure_sshd_compression: 'yes' # default: yes
+secure_sshd_tcp_keep_alive: 'no' # default: yes
+secure_sshd_compression: 'no' # default: yes
 secure_sshd_max_startups: 10:30:60 # default: 10:30:100 (start:rate:full, random early drop)
 secure_sshd_rekeylimit: 250M 1800
+secure_sshd_permit_tunnel: 'no' # default no
+secure_sshd_kerberos_auth: 'no' # default no
+secure_sshd_gssapi_auth: 'no' # default no

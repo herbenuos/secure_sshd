@@ -8,7 +8,7 @@
     group: root
     mode: '0700'
 
-
+# jinja2 is not allowed in 'when', so we create a variable which can include jinja2...
 - name: Set sshd config include line
   ansible.builtin.set_fact:
     include_line: 'Include {{ sshd_config_directory }}/sshd_config.d/*.conf'
@@ -26,6 +26,8 @@
     state: absent
     dest: '{{ sshd_config_filepath }}'
     line: '{{ include_line }}'
+    owner: root
+    mode: '0600'
   notify: Restart sshd
   when: last_line.stdout != include_line
 
@@ -34,19 +36,11 @@
   ansible.builtin.lineinfile:
     dest: '{{ sshd_config_filepath }}'
     line: '{{ include_line }}'
+    owner: root
+    mode: '0600'
     insertafter: EOF
   notify: Restart sshd
   when: last_line.stdout != include_line
-
-- name: Set openssh server policy
-  become: true
-  ansible.builtin.template:
-    src: opensshserver.config.j2
-    dest: /etc/crypto-policies/back-ends/opensshserver.config
-    owner: root
-    mode: '0600'
-  notify: Restart sshd
-  when: ansible_facts['os_family'] == "RedHat"
 
 - name: Set Allowed Kex/Ciphers/MACs
   become: true
@@ -55,6 +49,8 @@
     marker: "# {mark} UOS CERT SSH Hardening"
     state: present
     insertbefore: "^Include .*"
+    owner: root
+    mode: '0600'
     block: |
       Ciphers {{ secure_sshd_ciphers | join(",") }}
       MACs {{ secure_sshd_macs | join(",") }}
@@ -63,7 +59,6 @@
       HostKeyAlgorithms {{ secure_sshd_hostkey_algorithms | join(",") }}
       CASignatureAlgorithms {{ secure_sshd_ca_signature_algorithms | join(",") }}
       RequiredRSASize {{ secure_sshd_required_rsa_keysize_bits }}
-  when: ansible_facts['os_family'] != "RedHat"
   notify: Restart sshd
 
 - name: Change config
@@ -76,6 +71,8 @@
         regexp: "{{ item.regex }}"
         state: present
         line: "{{ item.line }}"
+        owner: root
+        mode: '0600'
         backrefs: true
       loop:
         - name: Enable Verbose Logging
@@ -103,7 +100,7 @@
           regex: '^#?LoginGraceTime '
           line: 'LoginGraceTime {{ secure_sshd_login_grace_time }}'
         - name: Set maximum authentication tries
-          regex: '^MaxAuthTries '
+          regex: '^#?MaxAuthTries '
           line: 'MaxAuthTries {{ secure_sshd_max_auth_tries }}'
         - name: Enable PAM (pluggable Authentication Module)
           regex: '^#?UsePAM '
@@ -143,18 +140,18 @@
           line: 'PermitEmptyPasswords {{ secure_sshd_permit_empty_passwords }}'
         - name: Disable GSSAPI
           regex: '^#?GSSAPIAuthentication '
-          line: 'GSSAPIAuthentication no'
+          line: 'GSSAPIAuthentication {{ secure_sshd_gssapi_auth }}'
         - name: Disable Kerberos
           regex: '^#?KerberosAuthentication '
-          line: 'KerberosAuthentication no'
+          line: 'KerberosAuthentication {{ secure_sshd_kerberos_auth }}'
         - name: Rekey Limit
           regex: '^#?RekeyLimit '
           line: 'RekeyLimit {{ secure_sshd_rekeylimit }}'
         - name: Disable Tunneling
           regex: '^#?PermitTunnel '
-          line: PermitTunnel no
+          line: 'PermitTunnel {{ secure_sshd_permit_tunnel }}'
       loop_control:
-        label: "{{ item.name }}"
+        label: "{{ item.line }}"
 
 - name: Change config
   become: true
@@ -166,6 +163,8 @@
         regexp: '^#?HostKey /etc/ssh/ssh_host_dsa_key'
         state: absent
         backrefs: true
+        owner: root
+        mode: '0600'
 
     - name: Disable ECDSA host key
       ansible.builtin.lineinfile:
@@ -173,3 +172,5 @@
         regexp: '^#?HostKey /etc/ssh/ssh_host_ecdsa_key'
         state: absent
         backrefs: true
+        owner: root
+        mode: '0600'
