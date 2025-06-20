@@ -8,6 +8,10 @@ galaxy_info:
   license: BSD-3-Clause
   min_ansible_version: "2.10"
   platforms:
+    - name: Fedora
+      versions:
+        - "41"
+        - "42"
     - name: EL
       versions:
         - "9"
@@ -18,4 +22,5 @@ galaxy_info:
     - name: Ubuntu
       versions:
         - jammy
+        - noble
 dependencies: []

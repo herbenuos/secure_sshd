@@ -1,7 +1,7 @@
 ---
 
-sshd_config_directory: /etc/ssh
-sshd_config_filepath: '{{ sshd_config_directory }}/sshd_config'
+secure_sshd_config_directory: /etc/ssh
+secure_sshd_config_filepath: '{{ secure_sshd_config_directory }}/sshd_config'
 
 # General SSH settings
 secure_sshd_protocol_version: 2
