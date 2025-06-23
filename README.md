@@ -1,6 +1,33 @@
 # Ansible role to harden the sshd configuration
 
-This ansible role changes an existing sshd config to use only secure crypto.
+This ansible role changes an existing sshd config to use only secure crypto as recommended by the [BSI TR 02102](https://www.bsi.bund.de/DE/Themen/Unternehmen-und-Organisationen/Standards-und-Zertifizierung/Technische-Richtlinien/TR-nach-Thema-sortiert/tr02102/tr-02102.html) and the following parameters:
+
+
+| Parameter | Value |
+| --- | --- |
+| Loglevel | VERBOSE |
+| PermitRootLogin | no |
+| PubkeyAuthentication | yes |
+| PasswordAuthentication | no |
+| Protocol | 2 |
+| LoginGraceTime | 1m |
+| MaxAuthTries | 6 |
+| UsePAM | yes |
+| MaxSessions | 2 |
+| MaxStartups | 10:30:60 |
+| StrictModes | yes |
+| X11Forwarding | no |
+| Compression | no |
+| TCPKeepAlive | no |
+| PrintMotd | yes |
+| PrintLastLog | yes |
+| AllowAgentForwarding | no |
+| AllowTcpForwarding | no |
+| PermitEmptyPasswords | no |
+| GSSAPIAuthentication | no |
+| KerberosAuthentication | no |
+| RekeyLimit | 250M 1800 |
+| PermitTunnel | no |
 
 ## Example playbook
 
@@ -11,19 +38,34 @@ Add this role to the `requirements.yml` and install it:
   scm: git
   version: 1.1.1
 ```
+### THIS MIGHT BREAK YOUR CONNECTIVITY TO THE SERVER(S)
+### CHECK IF YOU HAVE A RSA SSH-KEY WITH LESS THAN 3072 BIT!! 
+
+```bash
+ssh-keygen -lf ~/.ssh/id_rsa
+3072 SHA256:l0VdUfWSxaNg0/X/g8RIacN2afYt8rkxuABBlTE+JMw user@host (RSA)
+ ^ RSA KEY SIZE
+```
 
 Then include the role in your playbook:
-
 ```yaml
 - hosts: all
-  become: true
   roles:
     - role: secure_sshd
 ```
 
+If you ***need*** x11 forwarding enable it like so:
+```yaml
+- hosts: all
+  roles:
+    - role: secure_sshd
+      vars:
+        secure_sshd_allow_x11_forwarding: 'yes' # default: no
+```
+
 For a full example playbook with step-by-step instructions, take a look at
 
-- [Example Ansible playbook including secure\_sshd](https://github.com/UOS-RZ/secure_sshd/tree/example.playbook)
+- [Example Ansible playbook including secure\_sshd](example_playbook.yml)
 
 ## Configuration options
 

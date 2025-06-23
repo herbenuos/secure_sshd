@@ -1,0 +1,11 @@
+- name: Example Playbook
+  hosts: OneGroup:AnotherGroup:PartOfGroup[00:50]:all
+  tasks:
+    - name: Example task
+      ansible.builtin.ping:
+  roles:
+    - name: Harden sshd configuration
+      role: secure_sshd
+      vars:
+        secure_sshd_log_level: VERBOSE
+        secure_sshd_allow_x11_forwarding: 'yes' # default: no
