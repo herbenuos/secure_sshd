@@ -121,7 +121,7 @@
         - regex: '^#AllowAgentForwarding '
           line: 'AllowAgentForwarding {{ secure_sshd_allow_agent_forwarding }}'
         - regex: '^#?AllowTcpForwarding '
-          line: 'AllowTcpForwarding {{ secure_sshd_allow_agent_forwarding }}'
+          line: 'AllowTcpForwarding {{ secure_sshd_allow_tcp_forwarding }}'
         - regex: '^#?PermitEmptyPasswords '
           line: 'PermitEmptyPasswords {{ secure_sshd_permit_empty_passwords }}'
         - regex: '^#?GSSAPIAuthentication '
